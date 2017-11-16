@@ -68,3 +68,4 @@ ERはOXよりも10倍ほど遅くなります。
 
 - [ono\-t\.d\.dooo\.jp/GA/GA\-order\.html](http://ono-t.d.dooo.jp/GA/GA-order.html)
 - [巡回セールスマン問題と遺伝的アルゴリズム\(GA\)](https://www.studiok-i.net/tsp/)
+- [遺伝的アルゴリズム（Genetic Algorithm）を始めよう！](https://www.slideshare.net/kzokm/genetic-algorithm-41617242)
