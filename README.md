@@ -48,7 +48,7 @@ cat results_init3`ls results_init3 | head -n1`
 - "er": Edge recombination crossover
 
 ERにおいて、次の頂点が選択できないときは、未到達の頂点のうち現在の頂点から近い頂点を最大5個選び、その中からランダムに選択します。  
-ERはOXよりも10倍ほど遅くなります。
+ERはOXよりも4倍ほど遅くなります。
 
 ### 突然変異
 
@@ -68,4 +68,4 @@ ERはOXよりも10倍ほど遅くなります。
 
 - [ono\-t\.d\.dooo\.jp/GA/GA\-order\.html](http://ono-t.d.dooo.jp/GA/GA-order.html)
 - [巡回セールスマン問題と遺伝的アルゴリズム\(GA\)](https://www.studiok-i.net/tsp/)
-- [遺伝的アルゴリズム（Genetic Algorithm）を始めよう！](https://www.slideshare.net/kzokm/genetic-algorithm-41617242)
+- [遺伝的アルゴリズム（Genetic Algorithm）を始めよう！](https://www.slideshare.net/kzokm/genetic-algorithm-41617242)
