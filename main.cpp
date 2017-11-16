@@ -467,12 +467,11 @@ private:
                     uint to = e.first;
                     bool is_multi = e.second;
                     if (done[to]) continue;
-                    if (!conn_cnts[to]) continue;
                     nexts.emplace_back(!is_multi, conn_cnts[to], xrand.next_uint(), to);
                 }
 
                 if (nexts.size()) {
-                    sort(nexts.begin(), nexts.begin());
+                    sort(nexts.begin(), nexts.end());
                     pos = get<3>(nexts[0]);
                 } else {
                     nexts2.resize(0);
