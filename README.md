@@ -48,7 +48,7 @@ cat results_init3`ls results_init3 | head -n1`
 - "er": Edge recombination crossover
 
 ERにおいて、次の頂点が選択できないときは、未到達の頂点のうち現在の頂点から近い頂点を最大5個選び、その中からランダムに選択します。  
-ERはOXよりも4倍ほど遅くなります。
+ERはOXよりも4倍ほど遅くなりますが、n=200でOXと比べて1.2倍ほどの性能が出ます。
 
 ### 突然変異
 
