@@ -88,7 +88,7 @@ main_ox_init1_pm80:
 	main.cpp -o main_ox_init1_pm80
 
 main_er_init1_pm80:
-	${CC} ${CFLAGS} \
+	${CC} ${CFLAGS} ${INIT1_DEF} ${ER_DEF} \
 	-DP_MUTATION=0.8 \
 	-DLOG_FILE_ID='"er_init1_pm80"' \
 	main.cpp -o main_er_init1_pm80
