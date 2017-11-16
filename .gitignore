@@ -1,0 +1,8 @@
+*.swp
+*~
+*.exe
+main*
+!main.cpp
+log*
+results*
+
