@@ -1,4 +1,6 @@
 #include <chrono>
+#include <complex>
+
 using namespace std;
 
 class XRand {
@@ -33,6 +35,17 @@ public:
         return next_uint() % m;
     }
 
+    // return x (0 <= x <= 1)
+    double next_p() {
+        static constexpr uint32_t maxp = numeric_limits<uint32_t>::max() - 1;
+        return 1. * next_uint(maxp + 1) / maxp;
+    }
+
+    bool next_coin(double p, double eps = 1e-8) {
+        double x = next_p();
+        return abs(p - x) < eps || x + eps < p;
+    }
+
     template <typename RandomAccessIterator>
     void shuffle(RandomAccessIterator first, RandomAccessIterator last) {
         for (RandomAccessIterator iter = first; iter != last; ++iter) {
@@ -43,4 +56,4 @@ public:
 private:
     uint32_t x_, y_, z_, w_;
 };
-// /Xrand
+

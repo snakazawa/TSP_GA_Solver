@@ -1,4 +1,11 @@
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <vector>
+#include <set>
+#include <string>
+#include <complex>
+#include <cassert>
+#include <iostream>
+#include <fstream>
 #include <dirent.h>
 #include "xrand.cpp"
 #include "timer.cpp"
@@ -112,8 +119,6 @@ struct Path {
     }
 };
 
-constexpr double EPS = 1e-8;
-
 // TSP GA Solver
 class TspGaSolver {
 public:
@@ -222,7 +227,7 @@ private:
         current_paths.clear();
         current_paths.resize(n, Path(pn));
         temp_paths.clear();
-        temp_paths.resize(n + crossover_num, Path(pn));
+        temp_paths.resize(m, Path(pn));
 
         for (size_t i = 0; i < n; ++i) {
             Order &order = current_paths[i].order;
@@ -240,7 +245,7 @@ private:
         current_paths.clear();
         current_paths.resize(n, Path(pn));
         temp_paths.clear();
-        temp_paths.resize(n + crossover_num, Path(pn));
+        temp_paths.resize(m, Path(pn));
 
         string dirname(SRC_RESULT_DIR_PATH);
         DIR *dp;
@@ -494,10 +499,8 @@ private:
     // 突然変異
     // 二点間を入れ替える or ある経路を逆順にする or 二点間の経路をシャッフルする
     void mutation() {
-        uint32_t maxp = numeric_limits<uint32_t>::max() - 1;
-
         for (auto &path : temp_paths) {
-            if (p_mutation != 1.0 && 1. * xrand.next_uint(maxp + 1) / maxp + EPS > p_mutation) continue;
+            if (!xrand.next_coin(p_mutation)) continue;
 
             size_t a, b;
             do {

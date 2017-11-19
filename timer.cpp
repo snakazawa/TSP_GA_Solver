@@ -1,4 +1,10 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <chrono>
+#include <string>
+#include <map>
+
+using namespace std;
+
 typedef chrono::high_resolution_clock myclock;
 
 // 時間計測用
@@ -38,3 +44,4 @@ void reset_time() {
     temp_time.clear();
     cnt_time.clear();
 }
+
