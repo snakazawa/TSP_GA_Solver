@@ -121,7 +121,13 @@ public:
     uint current_generation;
 
     // 個体数
-    size_t n;
+    uint n;
+
+    // 交叉数
+    uint crossover_num;
+
+    // 個体数 + 交叉数
+    uint m;
 
     // 各個体のパス
     vector<Path> current_paths;
@@ -134,9 +140,6 @@ public:
 
     // 突然変異確率(0.0~1.0)
     double p_mutation = 0.1;
-
-    // 交叉数
-    uint crossover_num;
 
     // ループ回数（パラメータ調整用）
     uint loop_num;
@@ -152,8 +155,8 @@ public:
     // パラメーターの設定
     void configure(size_t n_, uint crossover_num_, double p_mutation_, uint loop_num_, uint max_group_num_) {
         n = n_;
-
         crossover_num = crossover_num_;
+        m = n + crossover_num;
 
         assert(p_mutation_ >= 0);
         assert(p_mutation_ <= 1);
@@ -319,220 +322,201 @@ private:
     // 交叉
     void crossover() {
         string type(CROSSOVER_TYPE);
-        if (type == "ox") crossover_ox();
-        else if (type == "er") crossover_er();
-        else throw "Invalid crossover type: " + type;
+
+        for (uint gi = 0; gi < group_num; ++gi) {
+            size_t gn0 = n / group_num;
+            size_t gn = gn0;
+            size_t gm0 = m / group_num;
+            size_t gm = gm0;
+            size_t gc0 = crossover_num / group_num;
+            size_t gc = gc0;
+            if (gi + 1 == group_num) {
+                gn = n - gn * (group_num - 1);
+                gm = m - gm * (group_num - 1);
+                gc = crossover_num - gc * (group_num - 1);
+            }
+
+            uint ci = 0;
+            while (ci < gc) {
+                size_t a, b;
+                do {
+                    a = gi * gn0 + xrand.next_uint(gn);
+                    b = gi * gn0 + xrand.next_uint(gn);
+                } while (a == b);
+
+                size_t c = n + gc0 * gi + ci;
+
+                Order &order_a = temp_paths[a].order;
+                Order &order_b = temp_paths[b].order;
+                Path &new_path = temp_paths[c];
+                Order &new_order = new_path.order;
+
+                if (type == "ox") crossover_ox(order_a, order_b, new_order);
+                else if (type == "er") crossover_er(order_a, order_b, new_order);
+                else throw "Invalid crossover type: " + type;
+
+                new_path.reset_score();
+                ++ci;
+            }
+        }
     }
 
     // 交叉: 順序交叉(OX, Order crossover)
-    void crossover_ox() {
-        for (uint i = 0; i < crossover_num; ++i) {
-            size_t gi = xrand.next_uint(group_num);
-            size_t gn0 = n / group_num;
-            size_t gn = gn0;
-            if (gi + 1 == group_num) gn = n - gn * (group_num - 1);
+    void crossover_ox(Order &order_a, Order &order_b, Order &new_order) {
+        size_t p, q;
+        do {
+            p = xrand.next_uint(pn);
+            q = xrand.next_uint(pn);
+        } while (p == q);
+        if (p > q) swap(p, q);
 
-            size_t a, b;
-            do {
-                a = gi * gn0 + xrand.next_uint(gn);
-                b = gi * gn0 + xrand.next_uint(gn);
-            } while (a == b);
+        vector<bool> done(pn);
 
-            size_t p, q;
-            do {
-                p = xrand.next_uint(pn);
-                q = xrand.next_uint(pn);
-            } while (p == q);
-            if (p > q) swap(p, q);
+        for (size_t j = p; j <= q; ++j) {
+            new_order[j] = order_a[j];
+            done[order_a[j]] = true;
+        }
 
-            Path &new_path = temp_paths[n + i];
-            Order &order_a = temp_paths[a].order;
-            Order &order_b = temp_paths[b].order;
-
-            vector<bool> done(pn);
-
-            for (size_t j = p; j <= q; ++j) {
-                new_path.order[j] = order_a[j];
-                done[order_a[j]] = true;
-            }
-
-            for (size_t j = 0, k = 0; j < pn; ) {
-                if (p <= j && j <= q) {
-                    ++j;
-                    continue;
-                }
-
-                size_t pi = order_b[k];
-                if (done[pi]) {
-                    ++k;
-                    continue;
-                }
-
-                new_path.order[j] = pi;
-
+        for (size_t j = 0, k = 0; j < pn; ) {
+            if (p <= j && j <= q) {
                 ++j;
-                ++k;
+                continue;
             }
-            temp_paths[n + i].reset_score();
+
+            size_t pi = order_b[k];
+            if (done[pi]) {
+                ++k;
+                continue;
+            }
+
+            new_order[j] = pi;
+
+            ++j;
+            ++k;
         }
     }
 
     // 交叉: 辺組み合わせ交叉(ER, Edge recombination crossover)
-    void crossover_er() {
-        // listは毎回メモリを確保すると重いので使い回す
+    void crossover_er(Order &order_a, Order &order_b, Order &new_order) {
         using Edge = pair<uint, bool>;
         const uint near_max_cnt = 5;
+        // listは毎回メモリを確保すると重いので使い回す
         // es[from] = {to, is_multi}
-        vector<vector<Edge>> es(pn);
-        vector<uint> conn_cnts(pn);
-        vector<bool> done(pn);
-        vector<tuple<bool, uint, uint, uint>> nexts(4);
-        vector<uint> nexts2(near_max_cnt);
-        Order order;
-        uint ci = 0;
+        static vector<vector<Edge>> es(pn);
+        static vector<uint> conn_cnts(pn);
+        static vector<bool> done(pn);
+        static vector<tuple<bool, uint, uint, uint>> nexts(4);
+        static vector<uint> nexts2(near_max_cnt);
 
-        // preinit
+        // init list
+        if (es.size() != pn) es.resize(pn);
         for (uint i = 0; i < pn; ++i) {
-            es[i].reserve(4);
+            es[i].resize(0);
         }
-        order.reserve(pn);
+        if (conn_cnts.size() != pn) conn_cnts.resize(pn);
+        if (done.size() != pn) done.resize(pn);
 
-        while (ci < crossover_num) {
-            size_t gi = xrand.next_uint(group_num);
-            size_t gn0 = n / group_num;
-            size_t gn = gn0;
-            if (gi + 1 == group_num) gn = n - gn * (group_num - 1);
+        for (uint i = 0; i + 1 < pn; ++i) {
+            for (auto &fromto : {
+                    make_pair(order_a[i], order_a[i + 1]), 
+                    make_pair(order_a[i + 1], order_a[i]), 
+                    make_pair(order_b[i], order_b[i + 1]), 
+                    make_pair(order_b[i + 1], order_b[i])}) {
+                uint from = fromto.first;
+                uint to = fromto.second;
 
-            size_t a, b;
-            do {
-                a = gi * gn0 + xrand.next_uint(gn);
-                b = gi * gn0 + xrand.next_uint(gn);
-            } while (a == b);
+                auto exists = find_if(es[from].begin(), es[from].end(),
+                        [to](const Edge &e){ return e.first == to; });
 
-            Order &order_a = temp_paths[a].order;
-            Order &order_b = temp_paths[b].order;
-
-            for (uint i = 0; i < pn; ++i) {
-                es[i].clear();
-                es[i].resize(0);
-            }
-
-            for (uint i = 0; i + 1 < pn; ++i) {
-                for (auto &fromto : {
-                        make_pair(order_a[i], order_a[i + 1]), 
-                        make_pair(order_a[i + 1], order_a[i]), 
-                        make_pair(order_b[i], order_b[i + 1]), 
-                        make_pair(order_b[i + 1], order_b[i])}) {
-                    uint from = fromto.first;
-                    uint to = fromto.second;
-
-                    auto exists = find_if(es[from].begin(), es[from].end(),
-                            [to](const Edge &e){ return e.first == to; });
-
-                    if (exists == es[from].end()) {
-                        es[from].emplace_back(to, false);
-                    } else {
-                        exists->second = true;
-                    }
-                }
-            }
-
-            for (uint i = 0; i < pn; ++i) {
-                conn_cnts[i] = es[i].size();
-                done[i] = false;
-            }
-
-            order.resize(0);
-
-            uint pos = xrand.next_uint(2) ? order_a[0] : order_b[0];
-
-            // 共通辺があればそれを使う
-            // 最小の辺を持つ頂点を使う
-            // 上2つを満たした頂点が複数あればランダム
-            // 上を満たす頂点がなければ近い順に最大5頂点からランダム
-            while(true) {
-                done[pos] = true;
-
-                order.push_back(pos);
-
-                for (auto &to : es[pos]) {
-                    --conn_cnts[to.first];
-                }
-
-                if (order.size() == pn) break;
-
-                nexts.resize(0);
-
-                for (auto &e : es[pos]) {
-                    uint to = e.first;
-                    bool is_multi = e.second;
-                    if (done[to]) continue;
-                    nexts.emplace_back(!is_multi, conn_cnts[to], xrand.next_uint(), to);
-                }
-
-                if (nexts.size()) {
-                    sort(nexts.begin(), nexts.end());
-                    pos = get<3>(nexts[0]);
+                if (exists == es[from].end()) {
+                    es[from].emplace_back(to, false);
                 } else {
-                    nexts2.resize(0);
-                    for (uint next : nears[pos]) {
-                        if (!done[next]) {
-                            nexts2.push_back(next);
-                            if (nexts2.size() == near_max_cnt) break;
-                        }
-                    }
-                    pos = nexts2[xrand.next_uint(nexts2.size())];
+                    exists->second = true;
                 }
+            }
+        }
 
-                assert(!done[pos]);
+        for (uint i = 0; i < pn; ++i) {
+            conn_cnts[i] = es[i].size();
+            done[i] = false;
+        }
+
+        new_order.resize(0);
+
+        uint pos = xrand.next_uint(2) ? order_a[0] : order_b[0];
+
+        // 共通辺があればそれを使う
+        // 最小の辺を持つ頂点を使う
+        // 上2つを満たした頂点が複数あればランダム
+        // 上を満たす頂点がなければ近い順に最大5頂点からランダム
+        while(true) {
+            done[pos] = true;
+
+            new_order.push_back(pos);
+
+            for (auto &to : es[pos]) {
+                --conn_cnts[to.first];
             }
 
-            uint done_cnt = count(done.begin(), done.end(), true);
-            assert(done_cnt == (uint)pn);
-            for (auto conn_cnt : conn_cnts) assert(!conn_cnt);
+            if (new_order.size() == pn) break;
 
-            temp_paths[n + ci].order = order;
-            temp_paths[n + ci].reset_score();
-            ++ci;
+            nexts.resize(0);
+
+            for (auto &e : es[pos]) {
+                uint to = e.first;
+                bool is_multi = e.second;
+                if (done[to]) continue;
+                nexts.emplace_back(!is_multi, conn_cnts[to], xrand.next_uint(), to);
+            }
+
+            if (nexts.size()) {
+                sort(nexts.begin(), nexts.end());
+                pos = get<3>(nexts[0]);
+            } else {
+                nexts2.resize(0);
+                for (uint next : nears[pos]) {
+                    if (!done[next]) {
+                        nexts2.push_back(next);
+                        if (nexts2.size() == near_max_cnt) break;
+                    }
+                }
+                pos = nexts2[xrand.next_uint(nexts2.size())];
+            }
+
+            assert(!done[pos]);
         }
+
+        uint done_cnt = count(done.begin(), done.end(), true);
+        assert(done_cnt == (uint)pn);
+        for (auto conn_cnt : conn_cnts) assert(!conn_cnt);
     }
 
     // 突然変異
     // 二点間を入れ替える or ある経路を逆順にする or 二点間の経路をシャッフルする
     void mutation() {
         uint32_t maxp = numeric_limits<uint32_t>::max() - 1;
+
         for (auto &path : temp_paths) {
             if (p_mutation != 1.0 && 1. * xrand.next_uint(maxp + 1) / maxp + EPS > p_mutation) continue;
+
+            size_t a, b;
+            do {
+                a = xrand.next_uint(pn);
+                b = xrand.next_uint(pn);
+            } while (a == b);
 
             uint k = xrand.next_uint(3);
 
             if (k == 0) {
-                size_t a, b;
-                do {
-                    a = xrand.next_uint(pn);
-                    b = xrand.next_uint(pn);
-                } while (a == b);
-
                 swap(path.order[a], path.order[b]);
             } else if (k == 1) {
-                size_t a, b;
-                do {
-                    a = xrand.next_uint(pn);
-                    b = xrand.next_uint(pn);
-                } while (a == b);
                 if (a > b) swap(a, b);
-
                 reverse(path.order.begin() + a, path.order.begin() + b);
             } else {
-                size_t a, b;
-                do {
-                    a = xrand.next_uint(pn);
-                    b = xrand.next_uint(pn);
-                } while (a == b);
                 if (a > b) swap(a, b);
-
                 xrand.shuffle(path.order.begin() + a, path.order.begin() + b);
             }
+
             path.reset_score();
         }
     }
@@ -541,43 +525,41 @@ private:
     // groupごとにElitism Selection
     // 同じデータは弾く（hashを使って同一判定）
     void selection() {
-        size_t m = temp_paths.size();
-
-        assert(m >= n);
-
         for (size_t gi = 0; gi < group_num; ++gi) {
+            size_t gn0 = n / group_num;
+            size_t gn = gn0;
             size_t gm0 = m / group_num;
             size_t gm = gm0;
-            if (gi + 1 == group_num) gm = m - gm * (group_num - 1);
-
+            size_t gc0 = crossover_num / group_num;
+            size_t gc = gc0;
+            if (gi + 1 == group_num) {
+                gn = n - gn * (group_num - 1);
+                gm = m - gm * (group_num - 1);
+                gc = crossover_num - gc * (group_num - 1);
+            }
+            
             // score, index
             vector<pair<Score, uint>> scores(gm);
-
-            for (size_t i = 0; i < gm; ++i) {
-                int j = gi * gm0 + i;
+            for (size_t i = 0; i < gn; ++i) {
+                int j = gi * gn0 + i;
                 scores[i].first = temp_paths[j].calc_score();
                 scores[i].second = j;
             }
+            for (size_t i = 0; i < gc; ++i) {
+                int j = n + gi * gc0 + i;
+                scores[gn + i].first = temp_paths[j].calc_score();
+                scores[gn + i].second = j;
+            }
 
             sort(scores.begin(), scores.end());
-
-            size_t gn0 = n / group_num;
-            size_t gn = gn0;
-            if (gi + 1 == group_num) gn = n - gn * (group_num - 1);
-
-            /*
-            for (size_t i = 0; i < gn; ++i) {
-                current_paths[gi * gn0 + i] = temp_paths[scores[i].second];
-            }
-            */
-
+            
             set<uint> exists;
             vector<bool> done(gm);
 
             size_t i = 0;
             for (size_t j = 0; j < gm && i < gn; ++j) {
                 auto &path = temp_paths[scores[j].second];
-                auto hash = path.hash();
+                uint hash = path.hash();
                 if (exists.count(hash)) continue;
                 exists.insert(hash);
                 current_paths[gi * gn0 + i] = path;
@@ -609,7 +591,8 @@ private:
 
     void update_group_num() {
         if (current_generation >= loop_num) return;
-        group_num = 1 << ((loop_num - current_generation) * max_group_num / loop_num);
+        auto a = (loop_num - current_generation) * max_group_num;
+        group_num = 1 << ((a + loop_num - 1) / loop_num - 1);
     }
 };
 

@@ -1,29 +1,20 @@
 const fs = require('fs');
 
 const files = [
+  {filename: 'log_summary_ox_init1_pm1.txt', name: 'ox_pm0.1'},
   {filename: 'log_summary_ox_init1_pm10.txt', name: 'ox_pm0.10'},
-  {filename: 'log_summary_ox_init1_pm20.txt', name: 'ox_pm0.20'},
-  {filename: 'log_summary_ox_init1_pm30.txt', name: 'ox_pm0.30'},
   {filename: 'log_summary_ox_init1_pm50.txt', name: 'ox_pm0.50'},
-  {filename: 'log_summary_ox_init1_pm60.txt', name: 'ox_pm0.60'},
-  {filename: 'log_summary_ox_init1_pm80.txt', name: 'ox_pm0.80'},
   {filename: 'log_summary_ox_init1.txt', name: 'ox_pm1.00'},
 
+  {filename: 'log_summary_er_init1_grp5.txt', name: 'er_grp5'},
+  {filename: 'log_summary_er_init1_grp10.txt', name: 'er_grp10'},
+  {filename: 'log_summary_er_init1_pm1.txt', name: 'er_pm0.1'},
   {filename: 'log_summary_er_init1_pm10.txt', name: 'er_pm0.10'},
-  {filename: 'log_summary_er_init1_pm20.txt', name: 'er_pm0.20'},
-  {filename: 'log_summary_er_init1_pm30.txt', name: 'er_pm0.30'},
   {filename: 'log_summary_er_init1_pm50.txt', name: 'er_pm0.50'},
-  {filename: 'log_summary_er_init1_pm60.txt', name: 'er_pm0.60'},
-  {filename: 'log_summary_er_init1_pm80.txt', name: 'er_pm0.80'},
   {filename: 'log_summary_er_init1.txt', name: 'er_pm1.00'},
 
-  {filename: 'log_summary_er_init1_pm10.txt_2', name: 'er_pm0.10_bef'},
-  {filename: 'log_summary_er_init1_pm20.txt_2', name: 'er_pm0.20_bef'},
-  {filename: 'log_summary_er_init1_pm30.txt_2', name: 'er_pm0.30_bef'},
-  {filename: 'log_summary_er_init1_pm50.txt_2', name: 'er_pm0.50_bef'},
-  {filename: 'log_summary_er_init1_pm60.txt_2', name: 'er_pm0.60_bef'},
-  {filename: 'log_summary_er_init1_pm80.txt_2', name: 'er_pm0.80_bef'},
-  {filename: 'log_summary_er_init1.txt_2', name: 'er_pm1.00_bef'},
+  {filename: 'log_summary_ox_init2.txt', name: 'ox_init2'},
+  {filename: 'log_summary_er_init2.txt', name: 'er_init2'},
 ];
 
 const header = ['filename', 'n', 'avg', 'sd', 'min', 'max'];
@@ -35,8 +26,8 @@ files.forEach(({filename, name}) => {
     .map(row => row
       .split(',')
       .map(row => row.trim())
-      .map(row => row.split(': '))
-      .filter(row => row[0] === 'Score')
+      .map(row => row.split(' '))
+      .filter(row => row[0] === 'Score:')
       [0]
     )
     .filter(x => x)
