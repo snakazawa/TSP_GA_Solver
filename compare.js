@@ -1,6 +1,7 @@
 const fs = require('fs');
 
 const files = [
+  {filename: 'log_summary_dev.txt', name: 'er_pm_dev'},
   {filename: 'log_summary_er_init1_pm0.txt', name: 'er_pm0.00'},
   {filename: 'log_summary_er_init1_pm1.txt', name: 'er_pm0.01'},
   {filename: 'log_summary_er_init1_pm10.txt', name: 'er_pm0.10'},

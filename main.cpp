@@ -404,7 +404,7 @@ private:
     // 交叉: 辺組み合わせ交叉(ER, Edge recombination crossover)
     void crossover_er(Order &order_a, Order &order_b, Order &new_order) {
         using Edge = pair<uint, bool>;
-        const uint near_max_cnt = 5;
+        const uint near_max_cnt = 1;
         // listは毎回メモリを確保すると重いので使い回す
         // es[from] = {to, is_multi}
         static vector<vector<Edge>> es(pn);
@@ -453,7 +453,7 @@ private:
         // 共通辺があればそれを使う
         // 最小の辺を持つ頂点を使う
         // 上2つを満たした頂点が複数あればランダム
-        // 上を満たす頂点がなければ近い順に最大5頂点からランダム
+        // 上を満たす頂点がなければ近い順に最大near_max_cnt個の頂点からランダム
         while(true) {
             done[pos] = true;
 

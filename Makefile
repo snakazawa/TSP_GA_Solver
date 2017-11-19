@@ -104,6 +104,7 @@ main_ox_init1_grp13:
 
 main_ox_init2:
 	${CC} ${CFLAGS} \
+    -DCONTINUOUS_MAX_CNT=10000 \
 	-DINIT_TYPE='"src"' \
 	-DCROSSOVER_TYPE='"ox"' \
 	-DRESULT_DIR_PATH='"results_init2"' \
@@ -113,6 +114,7 @@ main_ox_init2:
 
 main_er_init2:
 	${CC} ${CFLAGS} \
+    -DCONTINUOUS_MAX_CNT=10000 \
 	-DINIT_TYPE='"src"' \
 	-DCROSSOVER_TYPE='"er"' \
 	-DRESULT_DIR_PATH='"results_init2"' \
