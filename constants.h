@@ -22,18 +22,18 @@
 
 // 突然変異確率
 #ifndef P_MUTATION
-#define P_MUTATION 1.0
+#define P_MUTATION 0.01
 #endif
 
 // 同スコアを何世代続けたら終了するか
 #ifndef CONTINUOUS_MAX_CNT
-#define CONTINUOUS_MAX_CNT 500
+#define CONTINUOUS_MAX_CNT 200
 #endif
 
 // 交叉アルゴリズムの方式
 // "ox" or "er"
 #ifndef CROSSOVER_TYPE
-#define CROSSOVER_TYPE "ox"
+#define CROSSOVER_TYPE "er"
 #endif
 
 // 初期化の方式

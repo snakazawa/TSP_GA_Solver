@@ -131,9 +131,6 @@ public:
     // 交叉数
     uint crossover_num;
 
-    // 個体数 + 交叉数
-    uint m;
-
     // 各個体のパス
     vector<Path> current_paths;
 
@@ -161,7 +158,6 @@ public:
     void configure(size_t n_, uint crossover_num_, double p_mutation_, uint loop_num_, uint max_group_num_) {
         n = n_;
         crossover_num = crossover_num_;
-        m = n + crossover_num;
 
         assert(p_mutation_ >= 0);
         assert(p_mutation_ <= 1);
@@ -190,13 +186,13 @@ public:
 
     // 次の世代に進む
     void next_generation() {
-        for (size_t i = 0; i < n; ++i) {
-            temp_paths[i] = current_paths[i];
+        for (size_t i = 0; i < n + crossover_num; ++i) {
+            temp_paths[i] = current_paths[i % n];
         }
 
         crossover();
-        selection();
         mutation();
+        selection();
         update_best();
 
         ++current_generation;
@@ -227,25 +223,38 @@ private:
         current_paths.clear();
         current_paths.resize(n, Path(pn));
         temp_paths.clear();
-        temp_paths.resize(m, Path(pn));
+        temp_paths.resize(n + crossover_num, Path(pn));
 
         for (size_t i = 0; i < n; ++i) {
             Order &order = current_paths[i].order;
             iota(order.begin(), order.end(), 0);
             xrand.shuffle(order.begin(), order.end());
+        }
+    }
 
-            temp_paths[i].order = order;
+    void read_order_from_result(string src_path, Order &order) {
+        ifstream ifs;
+        ifs.open(src_path, ios::in);
+
+        string dummy;
+        getline(ifs, dummy);
+        getline(ifs, dummy);
+        getline(ifs, dummy);
+
+        uint idx, x, y;
+        for (size_t j = 0; j < pn; ++j) {
+            ifs >> idx >> y >> x;
+            order[j] = idx;
         }
     }
 
     // 個体の初期化
     // results/ から取得
-    // ランキングから確率的に選択
     void init_from_results() {
         current_paths.clear();
         current_paths.resize(n, Path(pn));
         temp_paths.clear();
-        temp_paths.resize(m, Path(pn));
+        temp_paths.resize(n + crossover_num, Path(pn));
 
         string dirname(SRC_RESULT_DIR_PATH);
         DIR *dp;
@@ -274,7 +283,6 @@ private:
         }
 
         uint fn = filenames.size();
-        uint sum = (fn * (fn - 1)) / 2;
 
         assert(fn > 0);
 
@@ -284,41 +292,36 @@ private:
         iota(idxes.begin(), idxes.end(), 0);
         xrand.shuffle(idxes.begin(), idxes.end());
 
+        set<uint> exists;
+
         size_t i = 0;
-        while (i < n) {
-            size_t k = 0;
-            uint target_sum = 1 + xrand.next_uint(sum);
-            uint temp_sum = 0;
-            while (true) {
-                temp_sum += fn - k;
-                if (temp_sum >= target_sum) break;
-                ++k;
-            }
+        size_t k = 0;
+        while (i < n && k < fn) {
+            string src_path = dirname + "/" + filenames[k];
+            cout << "Read " << k << " " << i << " " << src_path << endl;
+            ++k;
 
-            ifstream ifs;
-            string path = dirname + "/" + filenames[k];
-            cout << "Read " << path << endl;
-            ifs.open(path, ios::in);
+            Path &path = current_paths[idxes[i]];
+            Order &order = path.order;
 
-            Order &order = current_paths[idxes[i]].order;
+            read_order_from_result(src_path, order);
 
-            string dummy;
-            getline(ifs, dummy);
-            getline(ifs, dummy);
-            getline(ifs, dummy);
+            auto hash = path.hash();
+            if (exists.count(hash)) continue;
+            exists.insert(hash);
 
-            uint idx, x, y;
-            for (size_t j = 0; j < pn; ++j) {
-                ifs >> idx >> y >> x;
-                order[j] = idx;
-            }
-
-            if (!current_paths[idxes[i]].validate_order()) {
+            if (!path.validate_order()) {
                 cout << "validate failed" << endl;
                 continue;
             }
 
-            temp_paths[idxes[i]].order = order;
+            ++i;
+        }
+
+        while (i < n) {
+            Order &order = current_paths[idxes[i]].order;
+            iota(order.begin(), order.end(), 0);
+            xrand.shuffle(order.begin(), order.end());
             ++i;
         }
     }
@@ -331,13 +334,10 @@ private:
         for (uint gi = 0; gi < group_num; ++gi) {
             size_t gn0 = n / group_num;
             size_t gn = gn0;
-            size_t gm0 = m / group_num;
-            size_t gm = gm0;
             size_t gc0 = crossover_num / group_num;
             size_t gc = gc0;
             if (gi + 1 == group_num) {
                 gn = n - gn * (group_num - 1);
-                gm = m - gm * (group_num - 1);
                 gc = crossover_num - gc * (group_num - 1);
             }
 
@@ -508,16 +508,13 @@ private:
                 b = xrand.next_uint(pn);
             } while (a == b);
 
-            uint k = xrand.next_uint(3);
+            uint k = xrand.next_uint(2);
 
             if (k == 0) {
                 swap(path.order[a], path.order[b]);
             } else if (k == 1) {
                 if (a > b) swap(a, b);
                 reverse(path.order.begin() + a, path.order.begin() + b);
-            } else {
-                if (a > b) swap(a, b);
-                xrand.shuffle(path.order.begin() + a, path.order.begin() + b);
             }
 
             path.reset_score();
@@ -531,25 +528,26 @@ private:
         for (size_t gi = 0; gi < group_num; ++gi) {
             size_t gn0 = n / group_num;
             size_t gn = gn0;
-            size_t gm0 = m / group_num;
-            size_t gm = gm0;
             size_t gc0 = crossover_num / group_num;
             size_t gc = gc0;
             if (gi + 1 == group_num) {
                 gn = n - gn * (group_num - 1);
-                gm = m - gm * (group_num - 1);
                 gc = crossover_num - gc * (group_num - 1);
             }
+
+            size_t m = gn + gc;
             
             // score, index
-            vector<pair<Score, uint>> scores(gm);
+            vector<pair<Score, uint>> scores(m);
             for (size_t i = 0; i < gn; ++i) {
-                int j = gi * gn0 + i;
+                uint j = gi * gn0 + i;
+                assert(j < n + crossover_num);
                 scores[i].first = temp_paths[j].calc_score();
                 scores[i].second = j;
             }
             for (size_t i = 0; i < gc; ++i) {
-                int j = n + gi * gc0 + i;
+                uint j = n + gi * gc0 + i;
+                assert(j < n + crossover_num);
                 scores[gn + i].first = temp_paths[j].calc_score();
                 scores[gn + i].second = j;
             }
@@ -557,10 +555,12 @@ private:
             sort(scores.begin(), scores.end());
             
             set<uint> exists;
-            vector<bool> done(gm);
+            vector<bool> done(m);
 
             size_t i = 0;
-            for (size_t j = 0; j < gm && i < gn; ++j) {
+            for (size_t j = 0; j < m && i < gn; ++j) {
+                assert(gi * gn0 + i < n);
+                assert(j < m);
                 auto &path = temp_paths[scores[j].second];
                 uint hash = path.hash();
                 if (exists.count(hash)) continue;
@@ -570,7 +570,8 @@ private:
                 ++i;
             }
 
-            for (size_t j = 0; j < gm && i < gn; ++j) {
+            for (size_t j = 0; j < m && i < gn; ++j) {
+                assert(j < m);
                 if (done[j]) continue;
                 current_paths[gi * gn0 + i] = temp_paths[scores[i].second];
                 done[j] = true;
@@ -642,8 +643,6 @@ void dump_to_file(Path &path, uint n, uint crossover_num, uint max_group_num, do
         ", Score: " << path.score << endl;
 
     ofs << endl;
-
-    cout << path.order.size() << endl;
 
     ofs << "\t" << zero_point.Y << "\t" << zero_point.X << endl;
     for (auto pi : path.order) {
