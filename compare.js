@@ -1,17 +1,8 @@
 const fs = require('fs');
 
 const files = [
-  {filename: 'log_summary_dev.txt', name: 'er_pm_dev'},
-  {filename: 'log_summary_er_init1_pm0.txt', name: 'er_pm0.00'},
-  {filename: 'log_summary_er_init1_pm1.txt', name: 'er_pm0.01'},
-  {filename: 'log_summary_er_init1_pm10.txt', name: 'er_pm0.10'},
-  {filename: 'log_summary_er_init1_grp13.txt', name: 'er_grp13'},
-
-  {filename: 'log_summary_ox_init1_grp1.txt', name: 'ox_grp1'},
-  {filename: 'log_summary_ox_init1_grp2.txt', name: 'ox_grp2'},
-  {filename: 'log_summary_ox_init1_grp3.txt', name: 'ox_grp3'},
-  {filename: 'log_summary_ox_init1_grp6.txt', name: 'ox_grp6'},
-  {filename: 'log_summary_ox_init1_grp13.txt', name: 'ox_grp13'}
+  {filename: 'log_summary_dev_a.txt', name: 'p=0.00'},
+  {filename: 'log_summary_dev_b.txt', name: 'p=0.01'}
 ];
 
 const statsHeader = ['avg', 'sd', 'min', 'max'];

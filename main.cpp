@@ -14,6 +14,8 @@
 
 using namespace std;
 
+const uint INF = 0x3f3f3f3f;
+
 struct Point {
     uint X;
     uint Y;
@@ -421,15 +423,12 @@ private:
                 vector<vector<Edge>>(pn));
         static vector<vector<uint>> conn_cnts_list(er_static_size, vector<uint>(pn));
         static vector<vector<bool>> done_list(er_static_size, vector<bool>(pn));
-        static vector<vector<tuple<bool, uint, uint, uint>>> nexts_list(er_static_size,
-                vector<tuple<bool, uint, uint, uint>>(4));
         static vector<vector<uint>> nexts2_list(er_static_size,
                 vector<uint>(near_max_cnt));
 
         vector<vector<Edge>> &es = es_list[static_i];
         vector<uint> &conn_cnts = conn_cnts_list[static_i];
         vector<bool> &done = done_list[static_i];
-        vector<tuple<bool, uint, uint, uint>> &nexts = nexts_list[static_i];
         vector<uint> &nexts2 = nexts2_list[static_i];
 
         // init list
@@ -481,23 +480,23 @@ private:
 
             if (new_order.size() == pn) break;
 
-            nexts.resize(0);
+            tuple<bool, uint, uint, uint> next(true, INF, INF, INF);
 
             for (auto &e : es[pos]) {
                 uint to = e.first;
                 bool is_multi = e.second;
                 if (done[to]) continue;
-                nexts.emplace_back(!is_multi, conn_cnts[to], xrand.next_uint(), to);
+                tuple<bool, uint, uint, uint> temp(!is_multi, conn_cnts[to], xrand.next_uint(), to);
+                if (temp < next) next = temp;
             }
 
-            if (nexts.size()) {
-                sort(nexts.begin(), nexts.end());
-                pos = get<3>(nexts[0]);
+            if (get<1>(next) != INF) {
+                pos = get<3>(next);
             } else {
                 nexts2.resize(0);
-                for (uint next : nears[pos]) {
-                    if (!done[next]) {
-                        nexts2.push_back(next);
+                for (uint next2 : nears[pos]) {
+                    if (!done[next2]) {
+                        nexts2.push_back(next2);
                         if (nexts2.size() == near_max_cnt) break;
                     }
                 }
@@ -507,9 +506,9 @@ private:
             assert(!done[pos]);
         }
 
-        uint done_cnt = count(done.begin(), done.end(), true);
-        assert(done_cnt == (uint)pn);
-        for (auto conn_cnt : conn_cnts) assert(!conn_cnt);
+        // uint done_cnt = count(done.begin(), done.end(), true);
+        // assert(done_cnt == (uint)pn);
+        // for (auto conn_cnt : conn_cnts) assert(!conn_cnt);
     }
 
     // 突然変異
@@ -749,6 +748,7 @@ int main(void) {
             endl;
 
         dump_to_file(solver.best_path, n, crossover_num, max_group_num, p_mutation, solver.current_generation, solve_time);
+        break;
     }
 
     return 0;

@@ -7,25 +7,15 @@ ER_DEF = -DCROSSOVER_TYPE='"er"'
 
 main: 
 	${CC} ${CFLAGS} ${INIT1_DEF} ${ER_DEF} \
-    -DP_MUTATION=0 \
+    -DK_INDIVIDUAL_NUM=5 \
+    -DCONTINUOUS_MAX_CNT=50 \
+    -DP_MUTATION=0.01 \
     -DLOG_FILE_ID='"dev"' \
     main.cpp -o main
 
 main_dev:
 	${CC} ${CFLAGS} ${INIT1_DEF} ${OX_DEF} \
 	-DLOG_FILE_ID='"dev"' \
-	main.cpp -o main
-
-all_init2: main_ox_init2 main_er_init2
-
-main_ox_init1:
-	${CC} ${CFLAGS} ${INIT1_DEF} ${OX_DEF} \
-    -DLOG_FILE_ID='"ox_init1"' \
-    main.cpp -o main_ox_init1
-
-main_er_init1:
-	${CC} ${CFLAGS} ${INIT1_DEF} ${ER_DEF} \
-    -DLOG_FILE_ID='"er_init1"' \
     main.cpp -o main_er_init1
 
 main_ox_init2:
