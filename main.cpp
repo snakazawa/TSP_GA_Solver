@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <dirent.h>
+#include <parallel/algorithm>
 #include "xrand.cpp"
 #include "timer.cpp"
 #include "constants.h"
@@ -341,27 +342,34 @@ private:
                 gc = crossover_num - gc * (group_num - 1);
             }
 
-            uint ci = 0;
-            while (ci < gc) {
-                size_t a, b;
-                do {
-                    a = gi * gn0 + xrand.next_uint(gn);
-                    b = gi * gn0 + xrand.next_uint(gn);
-                } while (a == b);
+            uint ci_s = 0;
+            while (ci_s < gc) {
+                uint ci_size = min(er_static_size, (uint)gc - ci_s);
 
-                size_t c = n + gc0 * gi + ci;
+                #pragma omp parallel for
+                for (uint i = 0; i < ci_size; ++i) {
+                    uint ci = ci_s + i;
+                    size_t a, b;
+                    do {
+                        a = gi * gn0 + xrand.next_uint(gn);
+                        b = gi * gn0 + xrand.next_uint(gn);
+                    } while (a == b);
 
-                Order &order_a = temp_paths[a].order;
-                Order &order_b = temp_paths[b].order;
-                Path &new_path = temp_paths[c];
-                Order &new_order = new_path.order;
+                    size_t c = n + gc0 * gi + ci;
 
-                if (type == "ox") crossover_ox(order_a, order_b, new_order);
-                else if (type == "er") crossover_er(order_a, order_b, new_order);
-                else throw "Invalid crossover type: " + type;
+                    Order &order_a = temp_paths[a].order;
+                    Order &order_b = temp_paths[b].order;
+                    Path &new_path = temp_paths[c];
+                    Order &new_order = new_path.order;
 
-                new_path.reset_score();
-                ++ci;
+                    if (type == "ox") crossover_ox(order_a, order_b, new_order);
+                    else if (type == "er") crossover_er(order_a, order_b, new_order, ci % er_static_size);
+                    else throw "Invalid crossover type: " + type;
+
+                    new_path.reset_score();
+                }
+
+                ci_s += ci_size;
             }
         }
     }
@@ -401,25 +409,33 @@ private:
         }
     }
 
+    uint er_static_size = 100;
+
     // 交叉: 辺組み合わせ交叉(ER, Edge recombination crossover)
-    void crossover_er(Order &order_a, Order &order_b, Order &new_order) {
+    void crossover_er(Order &order_a, Order &order_b, Order &new_order, uint static_i) {
         using Edge = pair<uint, bool>;
-        const uint near_max_cnt = 1;
+        constexpr uint near_max_cnt = 1;
         // listは毎回メモリを確保すると重いので使い回す
         // es[from] = {to, is_multi}
-        static vector<vector<Edge>> es(pn);
-        static vector<uint> conn_cnts(pn);
-        static vector<bool> done(pn);
-        static vector<tuple<bool, uint, uint, uint>> nexts(4);
-        static vector<uint> nexts2(near_max_cnt);
+        static vector<vector<vector<Edge>>> es_list(er_static_size,
+                vector<vector<Edge>>(pn));
+        static vector<vector<uint>> conn_cnts_list(er_static_size, vector<uint>(pn));
+        static vector<vector<bool>> done_list(er_static_size, vector<bool>(pn));
+        static vector<vector<tuple<bool, uint, uint, uint>>> nexts_list(er_static_size,
+                vector<tuple<bool, uint, uint, uint>>(4));
+        static vector<vector<uint>> nexts2_list(er_static_size,
+                vector<uint>(near_max_cnt));
+
+        vector<vector<Edge>> &es = es_list[static_i];
+        vector<uint> &conn_cnts = conn_cnts_list[static_i];
+        vector<bool> &done = done_list[static_i];
+        vector<tuple<bool, uint, uint, uint>> &nexts = nexts_list[static_i];
+        vector<uint> &nexts2 = nexts2_list[static_i];
 
         // init list
-        if (es.size() != pn) es.resize(pn);
         for (uint i = 0; i < pn; ++i) {
             es[i].resize(0);
         }
-        if (conn_cnts.size() != pn) conn_cnts.resize(pn);
-        if (done.size() != pn) done.resize(pn);
 
         for (uint i = 0; i + 1 < pn; ++i) {
             for (auto &fromto : {
@@ -499,7 +515,9 @@ private:
     // 突然変異
     // 二点間を入れ替える or ある経路を逆順にする or 二点間の経路をシャッフルする
     void mutation() {
-        for (auto &path : temp_paths) {
+        #pragma omp parallel for
+        for (size_t i = 0; i < temp_paths.size(); ++i) {
+            auto path = temp_paths[i];
             if (!xrand.next_coin(p_mutation)) continue;
 
             size_t a, b;
@@ -539,12 +557,14 @@ private:
             
             // score, index
             vector<pair<Score, uint>> scores(m);
+            #pragma omp parallel for
             for (size_t i = 0; i < gn; ++i) {
                 uint j = gi * gn0 + i;
                 assert(j < n + crossover_num);
                 scores[i].first = temp_paths[j].calc_score();
                 scores[i].second = j;
             }
+            #pragma omp parallel for
             for (size_t i = 0; i < gc; ++i) {
                 uint j = n + gi * gc0 + i;
                 assert(j < n + crossover_num);
@@ -582,6 +602,7 @@ private:
 
     void update_best() {
         vector<Score> scores(n);
+        #pragma omp parallel for
         for (size_t i = 0; i < n; ++i) {
             scores[i] = current_paths[i].calc_score();
         }

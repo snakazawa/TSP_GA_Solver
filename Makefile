@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -O2 -std=c++11 -Wall -Wshadow -Wextra
+CFLAGS = -O3 -std=c++11 -Wall -Wshadow -Wextra -fopenmp
 CFLAGS_DEBUG = -O0 -g -std=c++11 -Wall -Wshadow -Wextra
 INIT1_DEF = -DINIT_TYPE='"rand"' -DRESULT_DIR_PATH='"results_init1"'
 OX_DEF = -DCROSSOVER_TYPE='"ox"'
