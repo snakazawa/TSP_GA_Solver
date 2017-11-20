@@ -4,14 +4,14 @@ GAを用いたTSP(Traveling Salesman Problem)のSolverです。
 
 ## Requirements
 
-- C++ (>=11)
+- C++ (>=11, GCC)
 
 ## Run
 
 ```
 make
 
-./main_er_init1 < samples/sample6.txt
+./main < samples/sample6.txt
 ```
 
 ## Config
@@ -35,7 +35,7 @@ make
 - "ox": Ordered crossover
 - "er": Edge recombination crossover (デフォルト)
 
-ERにおいて、次の頂点が選択できないときは、未到達の頂点のうち現在の頂点から近い頂点を最大5個選び、その中からランダムに選択します。  
+ERにおいて、次の頂点が選択できないときは、未到達の頂点のうち現在の頂点から近い頂点を最大m個(デフォルト:1)選び、その中からランダムに選択します。  
 ERはOXよりも速度は遅くなりますが性能は良いです。
 
 ### 突然変異
