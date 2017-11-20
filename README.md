@@ -10,7 +10,7 @@ GAを用いたTSP(Traveling Salesman Problem)のSolverです。
 
 ```
 make
-
+mkdir results_init1
 ./main < samples/sample6.txt
 ```
 
